@@ -14,13 +14,29 @@ async fn handler(headers: Vec<(String, String)>, qry: HashMap<String, Value>, _b
     logger::init();
     log::info!("Headers -- {:?}", headers);
 
-    let msg = qry.get("msg").unwrap();
-    // let msg = String::from_utf8(body).unwrap_or("".to_string());
-    let resp = format!("Welcome to flows.network.\nYou just said: '{}'.\nLearn more at: https://github.com/flows-network/hello-world\n", msg);
+    // Extract username and password from query parameters
+    let username = qry.get("username").and_then(|v| v.as_str()).unwrap_or("");
+    let password = qry.get("password").and_then(|v| v.as_str()).unwrap_or("");
+
+    // Perform your login logic (replace this with your actual logic)
+    let login_success = is_valid_login(username, password);
+
+    // Respond based on the login result
+    let resp = if login_success {
+        "Login successful!\n"
+    } else {
+        "Login failed. Please check your username and password.\n"
+    };
 
     send_response(
         200,
         vec![(String::from("content-type"), String::from("text/html"))],
         resp.as_bytes().to_vec(),
     );
+}
+
+// Replace this with your actual login logic
+fn is_valid_login(username: &str, password: &str) -> bool {
+    // Basic hardcoded validation (replace with real logic)
+    username == "admin" && password == "password"
 }
