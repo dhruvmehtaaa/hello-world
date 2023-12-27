@@ -1,7 +1,16 @@
 [package]
 name = "hello-world"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
+
+[lib]
+path = "src/lib.rs"
+crate-type = ["cdylib"]
 
 [dependencies]
-actix-web = "3.3.2"
+webhook-flows = "0.3"
+flowsnet-platform-sdk = "0.1"
+tokio_wasi = { version = "1.25.1", features = ["macros", "rt"] }
+serde_json = "1.0"
+log = "0.4"
+anyhow = "1"
