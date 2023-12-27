@@ -1,63 +1,43 @@
-use webhook_flows::{create_endpoint, request_handler, send_response};
+use lambda_flows::{request_received, send_response};
 use flowsnet_platform_sdk::logger;
 use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 #[derive(Debug, Deserialize)]
-struct LoginRequest {
+struct LoginPayload {
     username: String,
-    password: String,
+    password: String
 }
 
 #[no_mangle]
 #[tokio::main(flavor = "current_thread")]
-pub async fn on_deploy() {
-    create_endpoint().await;
+pub async fn run() -> anyhow::Result<()> {
+    request_received(|headers, qry, body| {
+        login(headers, qry, body)
+    }).await;
+    Ok(())
 }
 
-#[request_handler]
-async fn handler(headers: Vec<(String, String)>, _qry: HashMap<String, Value>, body: Vec<u8>) {
+async fn login(headers: Vec<(String, String)>, _qry: HashMap<String, Value>, body: Vec<u8>) {
     logger::init();
     log::info!("Headers -- {:?}", headers);
 
-    // Deserialize JSON body into LoginRequest struct
-    let login_request: Result<LoginRequest, _> = serde_json::from_slice(&body);
-    
-    // Respond based on the deserialization result
-    match login_request {
-        Ok(request) => {
-            // Perform your login logic using request.username and request.password
-            let login_success = is_valid_login(&request.username, &request.password);
-
-            // Respond based on the login result
-            let resp = if login_success {
-                "Login successful!\n"
-            } else {
-                "Login failed. Please check your username and password.\n"
-            };
-
-            send_response(
-                200,
-                vec![(String::from("content-type"), String::from("text/html"))],
-                resp.as_bytes().to_vec(),
-            );
-        }
+    // let msg = qry.get("msg").unwrap();
+    // let msg = String::from_utf8(body).unwrap_or("".to_string());
+    let login_info: LoginPayload = match serde_json::from_slice(&body){
+        Ok(info) => info,
         Err(err) => {
-            log::error!("Failed to deserialize JSON body: {:?}", err);
-
-            // Respond with an error if JSON deserialization fails
-            send_response(
-                400,
-                vec![(String::from("content-type"), String::from("text/html"))],
-                b"Bad Request: Invalid JSON format.\n".to_vec(),
-            );
+            log::error!("Failed to parse login JSON: {}", err);
+            send_response(400, vec![], b"Bad Request".to_vec());
+            return;
         }
-    }
-}
+    };
+    // let resp = format!("Welcome to flows.network.\nYou just said: '{}'.\nLearn more at: https://github.com/flows-network/hello-world\n", msg);
 
-// Replace this with your actual login logic
-fn is_valid_login(username: &str, password: &str) -> bool {
-    // Basic hardcoded validation (replace with real logic)
-    username == "admin" && password == "password"
+    if login_info.username == "admin" && login_info.password == "admin" {
+        send_response(200, vec![], b"Login Success\n".to_vec());
+    } else {
+        send_response(401, vec![], b"Login Failed\n".to_vec());
+    }
 }
